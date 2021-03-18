@@ -68,9 +68,9 @@ def test_lda():
 if __name__ == '__main__':
     fig, ax = plt.subplots(2, 2, figsize=(10,10))
     data, label = load("datasets/iris.csv")
-    pc = Pca(2).fit_transform(data)
-    ld = Lda(2).fit_transform(data, label)
-    pc_ld = Lda(2).fit_transform(ld, label)
+    pc = Pca(2, True).fit_transform(data)
+    ld = Lda(2, True).fit_transform(data, label)
+    pc_ld = Lda(2, True).fit_transform(pc, label)
     for lab in set(label):
         d = data[label == lab]
         d_pc = pc[label == lab]

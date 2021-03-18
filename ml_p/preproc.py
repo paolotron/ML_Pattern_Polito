@@ -1,63 +1,109 @@
 from ml_p.blueprints import Pipe
 from ml_p.blueprints import NoFitError
-import numpy as np
 import numpy.linalg as ln
 from scipy.linalg import eigh
 
 
 class Pca(Pipe):
 
-    def __init__(self, n_dim=None):
+    def __init__(self, n_dim=None, center=False):
+        """
+        Pca init method
+        :param n_dim: int number of dimensions of the output data
+        :param center: Bool default False, if True the output is centered
+        """
         self.X = None
-        self.mu = None
-        self.DC = None
-        self.COV = None
         self.P = None
         self.n_dim = n_dim
+        self.mu = None
+        self.center = center
 
-    def fit(self, x: np.array, y=None) -> None:
+    def fit(self, x, y=None):
+        """
+        calculate the P matrix through eig-decomposition
+        of the Covariance Matrix
+        :param x: array-like
+        :param y: None, just for compatibility
+        :return: None
+        """
         if self.n_dim is None:
             self.n_dim = x.shape[1]
         self.X = x
-        self.mu = self.X.mean(axis=0)
-        self.DC = self.X - self.mu
-        self.COV = (self.DC.T @ self.DC) / self.X.shape[0]
-        s, U = ln.eigh(self.COV)
+        mu = self.X.mean(axis=0)
+        self.mu = mu
+        DC = self.X - mu
+        COV = (DC.T @ DC) / self.X.shape[0]
+        s, U = ln.eigh(COV)
         self.P = U[:, ::-1][:, 0:self.n_dim]
-        pass
 
     def fit_transform(self, x, y=None):
+        """
+        Compute fit and transform on the same input data
+        :param x: array-like
+        :param y: None
+        :return: array-like
+        """
         self.fit(x, None)
         return self.transform(x)
 
     def transform(self, x):
+        """
+        Transform the data with the P computed already
+        :param x: array-like
+        :return: array-like
+        """
         if x is None:
             raise NoFitError()
-        return (self.P.T @ x.T).T
+        return (self.P.T @ (x - (self.mu if self.center else 0)).T).T
 
 
 class Lda(Pipe):
 
-    def __init__(self, n_dim=None):
+    def __init__(self, n_dim=None, center=False):
+        """
+        Lda init method
+        :param n_dim: int number of dimensions of the output data
+        :param center: Bool default False, if True the output is centered
+        """
         self.X = None
         self.Y = None
         self.m = n_dim
         self.U = None
+        self.mu = None
+        self.center = center
 
     def fit_transform(self, x, y):
+        """
+        Compute fit and transform on the same input data
+        :param x: array-like
+        :param y: array-like, classes of x
+        :return: array-like
+        """
         self.fit(x, y)
         return self.transform(x)
 
     def transform(self, x):
-        return (self.U.T @ x.T).T
+        """
+        Compute the output through the U matrix on the input data
+        :param x:
+        :return: array-like
+        """
+        return (self.U.T @ (x - (self.mu.T if self.center else 0)).T).T
 
     def fit(self, x, y):
+        """
+        Compute the U matrix with the between and in-between classes covariance matrixes
+        :param x: array-like
+        :param y: array-like, classes of x
+        :return: None
+        """
         if self.m is None:
             self.m = x.shape[0]
         self.X = x.T
         self.Y = y
 
         mu = self.X.mean(1).reshape((-1, 1))
+        self.mu = mu
         SB_ls = []
         SW_ls = []
         for label in set(y):
@@ -68,9 +114,6 @@ class Lda(Pipe):
         SB = sum(SB_ls)/self.X.shape[1]
         SW = sum(SW_ls)/self.X.shape[1]
         s, U = eigh(SB, SW)
-        # W = U[:, ::-1][:, :self.m]
-        # UW, _, _ = ln.svd(W)
-        # self.U = UW[:, :self.m]
         self.U = U[:, ::-1][:, :self.m]
 
 
