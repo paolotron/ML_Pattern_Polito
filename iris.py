@@ -65,8 +65,8 @@ def test_lda():
     plot(comp, label)
 
 
-if __name__ == '__main__':
-    fig, ax = plt.subplots(2, 2, figsize=(10,10))
+def plot_reduction():
+    fig, ax = plt.subplots(2, 2, figsize=(10, 10))
     data, label = load("datasets/iris.csv")
     pc = Pca(2, True).fit_transform(data)
     ld = Lda(2, True).fit_transform(data, label)
@@ -87,3 +87,7 @@ if __name__ == '__main__':
     ax[1, 0].title.set_text("LDA")
     ax[1, 1].title.set_text("PCA+LDA")
     fig.show()
+
+
+if __name__ == '__main__':
+    plot_reduction()
