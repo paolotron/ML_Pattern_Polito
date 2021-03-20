@@ -72,16 +72,6 @@ class Lda(Pipe):
         self.mu = None
         self.center = center
 
-    def fit_transform(self, x, y):
-        """
-        Compute fit and transform on the same input data
-        :param x: array-like
-        :param y: array-like, classes of x
-        :return: array-like
-        """
-        self.fit(x, y)
-        return self.transform(x)
-
     def transform(self, x):
         """
         Compute the output through the U matrix on the input data
@@ -109,12 +99,38 @@ class Lda(Pipe):
         for label in set(y):
             x_c = self.X[:, y == label]
             mu_c = x_c.mean(1).reshape((-1, 1))
-            SB_ls.append(x_c.shape[1]*((mu_c-mu) @ (mu_c-mu).T))
+            nc = x_c.shape[1]
+            SB_ls.append(nc * (mu_c-mu) @ (mu_c-mu).T)
             SW_ls.append((x_c-mu_c) @ (x_c-mu_c).T)
-        SB = sum(SB_ls)/self.X.shape[1]
-        SW = sum(SW_ls)/self.X.shape[1]
+
+        N = self.X.shape[1]
+        SB = sum(SB_ls) / N  # Between Class Variability Matrix
+        SW = sum(SW_ls) / N  # Within Class Variability Matrix
+
         s, U = eigh(SB, SW)
         self.U = U[:, ::-1][:, :self.m]
+
+
+class StandardScaler(Pipe):
+
+    def __init__(self, with_mean=True, with_std=True):
+        self.with_mean = with_mean
+        self.with_std = with_std
+        self.mu = None
+        self.std = None
+
+    def fit(self, x, y=None):
+        self.mu = x.mean(0)
+        self.std = x.std(0)
+
+    def fit_transform(self, x, y=None):
+        self.fit(x, y)
+        return self.transform(x)
+
+    def transform(self, x):
+        mu = self.mu if self.with_mean else 0
+        std = self.std if self.with_std else 1
+        return (x - mu) / std
 
 
 

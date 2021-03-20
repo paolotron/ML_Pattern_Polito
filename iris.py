@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ml_p.preproc import Pca
 from ml_p.preproc import Lda
+from ml_p.preproc import StandardScaler
 
 
 def load(path):
@@ -90,4 +91,7 @@ def plot_reduction():
 
 
 if __name__ == '__main__':
-    plot_reduction()
+    # plot_reduction()
+    iris = load("datasets/iris.csv")
+    plot(iris[0], iris[1])
+    plot(StandardScaler().fit_transform(iris[0]), iris[1])
