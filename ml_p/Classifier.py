@@ -23,17 +23,21 @@ class NaiveBayes(Faucet):
 
 class Perceptron(Faucet):
 
-    def __init__(self, iterations=100, alpha=0.1):
+    def __init__(self, iterations=100, alpha=0.1, seed=None):
         self.Y = None
         self.X = None
         self.labels = None
         self.iter = iterations
         self.alpha = alpha
         self.weights = None
+        self.seed = seed
 
     def fit(self, x, y):
+        if self.seed is not None:
+            np.random.seed(self.seed)
+
         rand = np.random.choice(x.shape[0], x.shape[0])
-        self.X = np.hstack([ np.ones((x.shape[0], 1)), x])[rand, :].T
+        self.X = np.hstack([np.ones((x.shape[0], 1)), x])[rand, :].T
         self.Y = y.reshape((-1, 1))[rand, :]
         self.labels = np.unique(y)
 

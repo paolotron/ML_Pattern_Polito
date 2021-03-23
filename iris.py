@@ -93,15 +93,20 @@ def plot_reduction():
 
 def plot_division():
     iris, lab = load("datasets/iris.csv")
-    iris = iris[:, :2]
-    model = Perceptron(alpha=2)
+    iris = Lda(n_dim=2).fit_transform(iris, lab)
+    model = Perceptron(alpha=1)
     res = model.fit_predict(iris, lab)
-    w = model.weights[:, 0]
-    line = lambda x: 0.5 - ((w[1] * x + w[0]) / w[2])
+    w = model.weights.T[:, 2]
+    xmin, xmax = min(iris[:, 0]), max(iris[:, 0])
+    ymin, ymax = min(iris[:, 1]), max(iris[:, 1])
+
+    def line(x):
+        return (-(x*w[1])/w[2])-w[0]
+
     axes = plt.gca()
-    axes.set_xlim([4, 8])
-    axes.set_ylim([2, 5])
-    plt.axline((4, line(4)), (8, line(8)))
+    axes.set_xlim([xmin, xmax])
+    axes.set_ylim([ymin, ymax])
+    plt.axline((min(iris[:, 0]), line(min(iris[:, 0]))), (max(iris[:, 0]), max(iris[:, 0])))
     plot(iris, lab)
 
     print(sum([i == j for i, j in zip(lab, res)]) / len(res))
