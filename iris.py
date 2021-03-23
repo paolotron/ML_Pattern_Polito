@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from ml_p.preproc import Pca
 from ml_p.preproc import Lda
 from ml_p.preproc import StandardScaler
+from ml_p.Classifier import Perceptron
 
 
 def load(path):
@@ -90,8 +91,22 @@ def plot_reduction():
     fig.show()
 
 
+def plot_division():
+    iris, lab = load("datasets/iris.csv")
+    iris = iris[:, :2]
+    model = Perceptron(alpha=2)
+    res = model.fit_predict(iris, lab)
+    w = model.weights[:, 0]
+    line = lambda x: 0.5 - ((w[1] * x + w[0]) / w[2])
+    axes = plt.gca()
+    axes.set_xlim([4, 8])
+    axes.set_ylim([2, 5])
+    plt.axline((4, line(4)), (8, line(8)))
+    plot(iris, lab)
+
+    print(sum([i == j for i, j in zip(lab, res)]) / len(res))
+
+
 if __name__ == '__main__':
     # plot_reduction()
-    iris = load("datasets/iris.csv")
-    plot(iris[0], iris[1])
-    plot(StandardScaler().fit_transform(iris[0]), iris[1])
+    plot_division()
