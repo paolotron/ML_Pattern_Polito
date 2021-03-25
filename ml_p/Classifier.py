@@ -1,5 +1,7 @@
 from .blueprints import *
 import numpy as np
+from .probability import GAU_ND_logpdf
+from .preproc import get_cov
 
 
 class NaiveBayes(Faucet):
@@ -42,7 +44,7 @@ class Perceptron(Faucet):
         self.labels = np.unique(y)
 
         def single(y_true):
-            w = np.random.random((self.X.shape[0], 1)).T-0.5
+            w = np.random.random((self.X.shape[0], 1)).T - 0.5
             for i in range(self.iter):
                 for data, y_tr in zip(self.X.T, y_true.T):
                     data = data.reshape((1, -1))
@@ -61,6 +63,34 @@ class Perceptron(Faucet):
         x = np.hstack([one, x]).T
         y = self.weights.T @ x
         return self.labels[np.argmax(y, axis=0)]
+
+    def fit_predict(self, x, y):
+        self.fit(x, y)
+        return self.predict(x)
+
+
+class GaussianClassifier(Faucet):
+
+    def __init__(self):
+        self.mu_l = []
+        self.cov_l = []
+        self.labels = None
+
+    def fit(self, x, y):
+        self.labels, counts = np.unique(y, return_counts=True)
+        self.mu_l = []
+        self.cov_l = []
+        for label, count in zip(self.labels, counts):
+            x_class = x[y == label, :]
+            cov, mu = get_cov(x_class, rt_mean=True)
+            self.mu_l.append(mu)
+            self.cov_l.append(cov)
+
+    def predict(self, x):
+        predictions = []
+        for mu, cov in zip(self.mu_l, self.cov_l):
+            predictions.append(GAU_ND_logpdf(x.T, mu.reshape(-1, 1), cov.T))
+        return self.labels[np.vstack(predictions).argmax(0)]
 
     def fit_predict(self, x, y):
         self.fit(x, y)

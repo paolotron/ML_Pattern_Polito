@@ -2,7 +2,7 @@ from ml_p.blueprints import Pipe
 from ml_p.blueprints import NoFitError
 import numpy.linalg as ln
 from scipy.linalg import eigh
-
+import numpy as np
 
 class Pca(Pipe):
 
@@ -78,6 +78,8 @@ class Lda(Pipe):
         :param x:
         :return: array-like
         """
+        if self.X is None:
+            raise NoFitError()
         return (self.U.T @ (x - (self.mu.T if self.center else 0)).T).T
 
     def fit(self, x, y):
@@ -128,10 +130,17 @@ class StandardScaler(Pipe):
         return self.transform(x)
 
     def transform(self, x):
+        if self.mu is None:
+            raise NoFitError()
         mu = self.mu if self.with_mean else 0
         std = self.std if self.with_std else 1
         return (x - mu) / std
 
 
-
-
+def get_cov(x: np.ndarray, rt_mean=False):
+    M = x.shape[0]
+    mu = x.mean()
+    if rt_mean:
+        return (x - mu).T @ (x - mu) / M, mu
+    else:
+        return (x - mu).T @ (x - mu)

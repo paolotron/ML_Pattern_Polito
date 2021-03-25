@@ -2,8 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ml_p.preproc import Pca
 from ml_p.preproc import Lda
-from ml_p.preproc import StandardScaler
 from ml_p.Classifier import Perceptron
+from ml_p.Classifier import GaussianClassifier
+from ml_p.validation import train_test_split
 
 
 def load(path):
@@ -112,6 +113,16 @@ def plot_division():
     print(sum([i == j for i, j in zip(lab, res)]) / len(res))
 
 
+def test_gaussian():
+    iris, lab = load("datasets/iris.csv")
+
+    model = GaussianClassifier()
+    x_tr, x_ts, y_tr, y_ts = train_test_split(iris, lab)
+    model.fit(x_tr, y_tr)
+    res = model.predict(x_ts)
+    print(sum([i == j for i, j in zip(y_ts, res)]) / len(res))
+
+
 if __name__ == '__main__':
     # plot_reduction()
-    plot_division()
+    test_gaussian()
