@@ -16,9 +16,9 @@ class Pipe(ABC):
     def fit(self, x, y):
         pass
 
+    @abstractmethod
     def fit_transform(self, x, y):
-        self.fit(x, y)
-        return self.transform(x)
+        pass
 
     @abstractmethod
     def transform(self, x):

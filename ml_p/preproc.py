@@ -3,6 +3,9 @@ from ml_p.blueprints import NoFitError
 import numpy.linalg as ln
 from scipy.linalg import eigh
 import numpy as np
+from itertools import combinations_with_replacement
+from itertools import combinations
+
 
 class Pca(Pipe):
 
@@ -59,6 +62,10 @@ class Pca(Pipe):
 
 class Lda(Pipe):
 
+    def fit_transform(self, x, y=None):
+        self.fit(x, y)
+        return self.transform(x)
+
     def __init__(self, n_dim=None, center=False):
         """
         Lda init method
@@ -102,8 +109,8 @@ class Lda(Pipe):
             x_c = self.X[:, y == label]
             mu_c = x_c.mean(1).reshape((-1, 1))
             nc = x_c.shape[1]
-            SB_ls.append(nc * (mu_c-mu) @ (mu_c-mu).T)
-            SW_ls.append((x_c-mu_c) @ (x_c-mu_c).T)
+            SB_ls.append(nc * (mu_c - mu) @ (mu_c - mu).T)
+            SW_ls.append((x_c - mu_c) @ (x_c - mu_c).T)
 
         N = self.X.shape[1]
         SB = sum(SB_ls) / N  # Between Class Variability Matrix
@@ -116,8 +123,8 @@ class Lda(Pipe):
 class StandardScaler(Pipe):
 
     def __init__(self, with_mean=True, with_std=True):
-        self.with_mean = with_mean
-        self.with_std = with_std
+        self._with_mean = with_mean
+        self._with_std = with_std
         self.mu = None
         self.std = None
 
@@ -132,9 +139,38 @@ class StandardScaler(Pipe):
     def transform(self, x):
         if self.mu is None:
             raise NoFitError()
-        mu = self.mu if self.with_mean else 0
-        std = self.std if self.with_std else 1
+        mu = self.mu if self._with_mean else 0
+        std = self.std if self._with_std else 1
         return (x - mu) / std
+
+
+class PolynomialFeatures(Pipe):
+
+    def __init__(self, degree=2, interact_only=False):
+        self._degree = degree
+        self._interact_only = interact_only
+        self.n_input_features = 0
+
+    def fit_transform(self, x, y=None):
+        self.fit(x, y)
+        return self.transform(x)
+
+    def fit(self, x, y=None):
+        self.n_input_features = x.shape[1]
+
+    def transform(self, x):
+        if self.n_input_features is None:
+            raise NoFitError()
+        if self.n_input_features != x.shape[1]:
+            raise ValueError("Fitted data has different shape")
+
+        out = np.hstack([np.ones((x.shape[0], 1)), x])
+        ls = []
+        iterator = combinations_with_replacement(out.T, self._degree) \
+            if self._interact_only else combinations(out.T, self._degree)
+        for t in iterator:
+            ls.append(np.prod(np.array(t), axis=0).reshape(-1, 1))
+        return np.hstack(ls)
 
 
 def get_cov(x: np.ndarray, rt_mean=False):
