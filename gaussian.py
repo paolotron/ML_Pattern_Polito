@@ -28,7 +28,7 @@ if __name__ == "__main__":
     mu = np.load("Solutions/muND.npy")
     C = np.load("Solutions/CND.npy")
     pdfSol = np.load("Solutions/llND.npy")
-    pdfGau =p.GAU_ND_logpdf(XND, mu, C)
+    pdfGau = p.GAU_ND_logpdf(XND, mu, C)
     print(np.abs(pdfSol - pdfGau).mean())
 
 

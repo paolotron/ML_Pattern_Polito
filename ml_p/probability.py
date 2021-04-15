@@ -36,7 +36,7 @@ def GAU_ND_logpdf(x: np.ndarray, mu: np.ndarray, cov: np.ndarray) -> np.ndarray:
     """
     M = x.shape[0]
     s, ld = ln.slogdet(cov)
-    k = -M * np.log(2 * np.pi) * 0.5 - ld * 0.5
+    k = -M * np.log(2 * np.pi) * 0.5 - s * ld * 0.5
     f = x - mu
     res = k - .5 * ((f.T @ ln.inv(cov)).T * f).T.sum(-1)
     return res

@@ -175,8 +175,8 @@ class PolynomialFeatures(Pipe):
 
 def get_cov(x: np.ndarray, rt_mean=False):
     M = x.shape[0]
-    mu = x.mean()
+    mu = x.mean(axis=0)
     if rt_mean:
         return (x - mu).T @ (x - mu) / M, mu
     else:
-        return (x - mu).T @ (x - mu)
+        return (x - mu).T @ (x - mu) / M

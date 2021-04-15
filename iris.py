@@ -117,9 +117,9 @@ def test_gaussian():
     iris, lab = load("datasets/iris.csv")
 
     model = GaussianClassifier()
-    x_tr, x_ts, y_tr, y_ts = train_test_split(iris, lab)
-    model.fit(x_tr, y_tr)
-    res = model.predict(x_ts)
+    x_tr, y_tr, x_ts, y_ts = train_test_split(iris.T, lab)
+    model.fit(x_tr.T, y_tr)
+    res = model.predict(x_ts.T)
     print(sum([i == j for i, j in zip(y_ts, res)]) / len(res))
 
 
