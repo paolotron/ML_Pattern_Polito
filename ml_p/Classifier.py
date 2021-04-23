@@ -67,7 +67,7 @@ class GaussianClassifier(Faucet):
             self.estimates.append((label, np.mean(matrix, 0), ml_p.preproc.get_cov(matrix), count / x.shape[0]))
         return self
 
-    def predict(self, x):
+    def predict(self, x, get_prob=False):
         scores = []
         for label, mu, cov, prob in self.estimates:
             scores.append(ml_p.probability.GAU_ND_logpdf(x.T, mu.reshape(-1, 1), cov) + np.log(prob))
@@ -75,7 +75,7 @@ class GaussianClassifier(Faucet):
         logsum = scipy.special.logsumexp(SJoint, axis=1)
         self.Spost = SJoint - logsum.reshape(1, -1).T
         res = np.argmax(self.Spost, axis=1)
-        return res
+        return res if not get_prob else np.exp(self.Spost)
 
     def fit_predict(self, x, y):
         self.fit(x, y)
@@ -100,3 +100,32 @@ class TiedGaussian(GaussianClassifier):
         sigma = (1/y.shape[0])*sum([sigma*sum(y == label)for label, mu, sigma, prob in self.estimates])
         self.estimates = [(label, mu, sigma, prob) for label, mu, _, prob in self.estimates]
         return self
+
+
+class MultiNomial(Faucet):
+
+    def __init__(self, eps=0.01):
+        self.eps = eps
+        self.labels = None
+        self.estimate = None
+        self.Spost = None
+
+    def fit(self, x, y):
+        self.labels = np.unique(y)
+        arr_list = []
+        for label in self.labels:
+            arr = x[y == label, :].sum(axis=0) + self.eps
+            arr = np.log(arr) - np.log(arr.sum())
+            arr_list.append(arr)
+        self.estimate = np.vstack(arr_list)
+
+    def predict(self, x, get_prob=False):
+        sjoint = x @ self.estimate.T
+        logsum = scipy.special.logsumexp(sjoint, axis=1)
+        self.Spost = sjoint - logsum.reshape(-1, 1)
+        res = self.labels[np.argmax(x @ self.estimate.T, axis=1)]
+        return res if not get_prob else np.exp(self.Spost)
+
+    def fit_predict(self, x, y):
+        self.fit(x, y)
+        return self.predict(x)
