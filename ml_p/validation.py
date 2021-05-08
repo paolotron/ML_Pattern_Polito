@@ -1,5 +1,6 @@
 from .blueprints import *
 import numpy as np
+from time import perf_counter
 
 
 def train_test_split(x, y, size=0.8, seed=0):
@@ -37,6 +38,15 @@ def kfold_split(x, y, splits=10, seed=0):
         x_ts = x[chunks[i]]
         y_ts = y[chunks[i]]
         yield x_tr, y_tr, x_ts, y_ts
+
+
+def confusion_matrix(l_calc, l_real):
+    n_labels = len(np.unique(l_real))
+    confusion = np.zeros((n_labels, n_labels))
+    for i in range(n_labels):
+        for j in range(n_labels):
+            confusion[i, j] = sum((l_calc == i) & (l_real == j))
+    return confusion
 
 
 def accuracy(l_calc, l_real):

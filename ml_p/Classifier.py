@@ -4,6 +4,7 @@ import numpy as np
 from .probability import GAU_ND_logpdf
 from .preproc import get_cov
 import ml_p
+from scipy.optimize import fmin_l_bfgs_b
 
 
 class Perceptron(Faucet):
@@ -97,7 +98,7 @@ class TiedGaussian(GaussianClassifier):
 
     def fit(self, x, y):
         super().fit(x, y)
-        sigma = (1/y.shape[0])*sum([sigma*sum(y == label)for label, mu, sigma, prob in self.estimates])
+        sigma = (1 / y.shape[0]) * sum([sigma * sum(y == label) for label, mu, sigma, prob in self.estimates])
         self.estimates = [(label, mu, sigma, prob) for label, mu, _, prob in self.estimates]
         return self
 
@@ -129,3 +130,72 @@ class MultiNomial(Faucet):
     def fit_predict(self, x, y):
         self.fit(x, y)
         return self.predict(x)
+
+
+class LogisticRegression(Faucet):
+
+    def __init__(self, norm_coeff=1, max_fun=15000, max_iter=15000):
+        self.norm_coeff = norm_coeff
+        self.max_fun = max_fun
+        self.max_iter = max_iter
+        self.w = None
+        self.b = None
+        self.binary = None
+
+    def fit(self, x, y):
+        if np.unique(y).shape[0] == 2:
+            self.fit_2class(x, y)
+            self.binary = True
+        else:
+            self.fit_nclass(x, y)
+            self.binary = False
+
+    def fit_2class(self, x, y):
+        def objective_function(arr):
+            w, b = arr[:-1].reshape(-1, 1), arr[-1]
+            regular = self.norm_coeff / 2 * np.power(np.linalg.norm(w.T, 2), 2)
+            s = w.T @ x.T + b
+            body = y * np.log1p(np.exp(-s)) + (1 - y) * np.log1p(np.exp(s))
+            return regular + np.sum(body) / y.shape[0]
+
+        m, f, d = fmin_l_bfgs_b(objective_function, np.zeros(x.shape[1] + 1),
+                                approx_grad=True,
+                                maxfun=self.max_fun,
+                                maxiter=self.max_iter)
+        self.w = m[:-1]
+        self.b = m[-1]
+
+    def fit_nclass(self, x, y):
+        T = np.array((y.reshape(-1, 1) == np.unique(y)), dtype="int32")
+        sh = (np.unique(y).shape[0], x.shape[1]+1)
+
+        def objective_function(arr):
+            arr = arr.reshape(sh)
+            w, b = arr[:, :-1], arr[:, -1].reshape(-1, 1)
+            regular = self.norm_coeff/2 * np.sum(w*w)
+            s = w @ x.T
+            ls = scipy.special.logsumexp(s + b)
+            ly = s + b - ls
+            return regular - np.sum(T*ly.T) / x.shape[0]
+
+        init_w = np.zeros(sh)
+        m, f, d = fmin_l_bfgs_b(objective_function, init_w,
+                                approx_grad=True,
+                                maxfun=self.max_fun,
+                                maxiter=self.max_iter)
+        m = m.reshape(sh)
+        self.w = m[:, :-1]
+        self.b = m[:, -1].reshape(-1, 1)
+
+    def predict(self, x, score=False):
+        if self.w is None:
+            raise NoFitError()
+        if self.binary:
+            sc = self.w @ x.T + self.b
+            return sc if score else sc > 0
+        else:
+            sc = self.w @ x.T + self.b
+            return sc if score else np.argmax(sc, axis=0)
+
+    def fit_predict(self, x, y):
+        return self.predict(self.fit(x, y))

@@ -7,7 +7,7 @@ from ml_p.Classifier import GaussianClassifier
 from ml_p.validation import train_test_split
 
 
-def load(path):
+def load(path="datasets/iris.csv"):
     l = []
     matrix = []
     for line in open(path):

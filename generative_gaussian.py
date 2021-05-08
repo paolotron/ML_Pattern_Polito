@@ -22,12 +22,17 @@ def test_kfold(D, L):
     print(error_rates)
 
 
-if __name__ == "__main__":
+def lab5():
     D, L = load()
-    DTR, LTR, DTE, LTE = train_test_split(D, L, 2/3)
+    DTR, LTR, DTE, LTE = train_test_split(D, L, 2 / 3)
     test_kfold(D, L)
     model = ml_p.Classifier.TiedGaussian()
     model.fit(DTR, LTR)
     res = model.predict(DTE)
+    return res, LTE, model
+
+
+if __name__ == "__main__":
+    res, LTE, model = lab5()
     print(accuracy(res, LTE))
     print(np.sum(np.exp(model.Spost),axis=1))

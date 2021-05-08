@@ -1,6 +1,6 @@
 import numpy as np
 import numpy.linalg as ln
-
+import ml_p.validation as val
 
 def GAU_pdf(x: np.ndarray, mu: float, var: float) -> np.ndarray:
     """
@@ -40,3 +40,28 @@ def GAU_ND_logpdf(x: np.ndarray, mu: np.ndarray, cov: np.ndarray) -> np.ndarray:
     f = x - mu
     res = k - .5 * ((f.T @ ln.inv(cov)).T * f).T.sum(-1)
     return res
+
+
+def optimal_bayes_decision_with_ratio(llratio, prior_prob, cost_false_neg, cost_false_pos):
+    return llratio > -np.log((prior_prob * cost_false_neg) / ((1 - prior_prob) * cost_false_pos))
+
+
+def bayes_detection_function_with_confusion(confusion_matrix, prior_prob, cost_false_neg, cost_false_pos):
+    FNR = confusion_matrix[0, 1] / (confusion_matrix[0, 1] + confusion_matrix[1, 1])
+    FPR = confusion_matrix[1, 0] / (confusion_matrix[1, 0] + confusion_matrix[0, 0])
+    return FNR * cost_false_neg * prior_prob + FPR * (1 - prior_prob) * cost_false_pos
+
+
+def optimal_bayes_decision_with_threshold(llratio, thresh):
+    return llratio > thresh
+
+
+def minimal_detection_cost(llr, real_labels, prior_prob, cost_false_neg, cost_false_pos, n_samples=100):
+    results = []
+    normalizer_factor = min(prior_prob * cost_false_neg, (1 - prior_prob) * cost_false_pos)
+    for thresh in np.linspace(min(llr), max(llr), n_samples):
+        labels = optimal_bayes_decision_with_threshold(llr, thresh)
+        confus = val.confusion_matrix(labels, real_labels)
+        risk_test = bayes_detection_function_with_confusion(confus, prior_prob, cost_false_neg, cost_false_pos)
+        results.append(risk_test/normalizer_factor)
+    return min(results)

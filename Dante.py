@@ -24,7 +24,7 @@ if __name__ == "__main__":
     BOF.fit(sum(train, []))
     dataset_train = BOF.transform(sum(train, []))
     labels_train = np.array(sum([[i] * len(train[i]) for i in range(3)], []))
-    classifier = Classifier.MultiNomial()
+    classifier = Classifier.MultiNomial(eps=10)
     classifier.fit(dataset_train, labels_train)
     pred_lab = [classifier.predict(BOF.transform(test[i])) == i for i in range(3)]
     results = [sum(lis)/len(lis)for lis in pred_lab]
