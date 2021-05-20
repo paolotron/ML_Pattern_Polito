@@ -1,3 +1,5 @@
+import re
+
 import scipy.special
 from .blueprints import *
 import numpy as np
@@ -167,16 +169,16 @@ class LogisticRegression(Faucet):
 
     def fit_nclass(self, x, y):
         T = np.array((y.reshape(-1, 1) == np.unique(y)), dtype="int32")
-        sh = (np.unique(y).shape[0], x.shape[1]+1)
+        sh = (np.unique(y).shape[0], x.shape[1] + 1)
 
         def objective_function(arr):
             arr = arr.reshape(sh)
             w, b = arr[:, :-1], arr[:, -1].reshape(-1, 1)
-            regular = self.norm_coeff/2 * np.sum(w*w)
+            regular = self.norm_coeff / 2 * np.sum(w * w)
             s = w @ x.T
             ls = scipy.special.logsumexp(s + b)
             ly = s + b - ls
-            return regular - np.sum(T*ly.T) / x.shape[0]
+            return regular - np.sum(T * ly.T) / x.shape[0]
 
         init_w = np.zeros(sh)
         m, f, d = fmin_l_bfgs_b(objective_function, init_w,
@@ -199,3 +201,77 @@ class LogisticRegression(Faucet):
 
     def fit_predict(self, x, y):
         return self.predict(self.fit(x, y))
+
+
+class SVM(Faucet):
+
+    def __init__(self, k=1, c=1, ker=None, paramker=None):
+        self.C = c
+        self.K = k
+        self.W = None
+        self.b = None
+        self.w_cap = None
+        self.dual_gap = None
+        self.primal = None
+        self.dual = None
+        self.ker = ker
+        self.paramker = paramker
+        self.z = None
+        self.x = None
+        self.alpha = None
+
+    def fit(self, x, y):
+        z = np.where(y, -1, 1).reshape(-1, 1)
+        D = np.vstack([x.T, self.K * np.ones((1, x.shape[0]))])
+        H = z.T * (z * (self.kernel(x, x)))
+        self.z = z
+        self.x = x
+
+        def obj_fun(vect):
+            alpha = vect.reshape(-1, 1)
+            L = 0.5 * alpha.T @ H @ alpha - np.sum(alpha)
+            grad = (H @ alpha - 1).reshape(-1, )
+            L = L.reshape(-1, )
+            return L, grad
+
+        init_alpha = np.ones((H.shape[0],))
+        bounds = [(0, self.C) for _ in range(H.shape[0])]
+        m, self.primal, _ = fmin_l_bfgs_b(obj_fun, init_alpha, bounds=bounds, approx_grad=False, factr=1.)
+        self.alpha = m
+        res = np.sum(m * z.T * D, axis=1)
+        self.W = res[:-1]
+        self.b = res[-1]
+        self.w_cap = res
+
+        const = 0.5 * (res * res).sum()
+        decision = self.W @ x.T + self.b * self.K
+        tt = np.vstack([1 - z.T * decision, np.zeros(D.shape[1])])
+        temp_max = np.max(tt, axis=0)
+        primal_obj = const + self.C * np.sum(temp_max)
+        primal_obj_func = obj_fun(m)[0]
+        self.dual_gap = primal_obj_func + primal_obj
+
+    def kernel(self, xi, xj):
+        if self.ker is None:
+            return xi @ xj.T + self.K
+        if self.ker == "Poly":
+            return np.power(xi @ xj.T + self.paramker[1], self.paramker[0]) + self.K**2
+        if self.ker == "Radial":
+            res = []
+            for line in xi:
+                res.append(np.exp(-self.paramker[0] * np.linalg.norm(line-xj, 2, axis=1)**2))
+            return np.vstack(res)
+
+    def predict(self, x):
+        if self.ker is None:
+            score = self.W @ x.T + self.b
+        else:
+            ker_res = self.kernel(self.x, x)
+            score = np.sum(self.alpha.reshape(-1, 1) * self.z * ker_res, axis=0)
+        return np.where(score > 0, 0, 1)
+
+    def get_gap(self):
+        return self.dual_gap[0] * 2
+
+    def fit_predict(self, x, y):
+        pass
