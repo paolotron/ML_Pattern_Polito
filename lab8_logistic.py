@@ -52,4 +52,5 @@ def load_iris_binary():
 
 
 if __name__ == "__main__":
+    binary_logistic()
     multiclass_logistic()
